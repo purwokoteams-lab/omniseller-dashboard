@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniSeller — Dashboard Penjualan & Stok</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="position:fixed;inset:0;background:var(--bg);z-index:1000;display:flex;align-items:center;justify-content:center">
+  <div class="card" style="width:340px;max-width:90vw">
+    <div style="text-align:center;margin-bottom:18px">
+      <img id="login-logo-img" style="max-width:64px;max-height:64px;display:none;margin:0 auto 8px">
+      <h1 style="font-size:18px;font-weight:700;justify-content:center;display:flex;align-items:center;gap:8px" id="login-logo-fallback">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent)"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        <em style="color:var(--accent);font-style:normal">Omni</em>Seller
+      </h1>
+      <small style="color:var(--text3)">Login Administrator</small>
+    </div>
+    <div id="login-alert"></div>
+    <div class="form-group"><label>Email</label><input class="form-input" type="email" id="login-email" placeholder="admin@tokoanda.com"></div>
+    <div class="form-group"><label>Password</label><input class="form-input" type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" id="btn-login" onclick="adminLogin()">Masuk</button>
+    <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--text3)">Belum ada akun? Buat akun admin pertama di Supabase Dashboard → Authentication.</div>
+  </div>
+</div>
+
+<div id="app-wrap" style="display:none">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo" id="sidebar-logo-wrap">
+    <h1 id="sidebar-logo-h1">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent)"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <em>Omni</em>Seller
+    </h1>
+    <small id="sidebar-logo-sub">Multi-Marketplace Dashboard</small>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Utama</div>
+    <div class="nav-item active" onclick="showSection('dashboard',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Dashboard</span>
+    </div>
+    <div class="nav-item" onclick="showSection('penjualan',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Penjualan</span>
+    </div>
+    <div class="nav-item" onclick="showSection('stok',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      <span>Stok & Gudang</span>
+      <span class="nav-badge" id="nb-stok">0</span>
+    </div>
+    <div class="nav-section">Analitik</div>
+    <div class="nav-item" onclick="showSection('produk',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      <span>Produk & Kategori</span>
+    </div>
+    <div class="nav-item" onclick="showSection('laba',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <span>Laba per Produk</span>
+    </div>
+    <div class="nav-item" onclick="showSection('laporan',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>Laporan Keuangan</span>
+    </div>
+    <div class="nav-section">Data</div>
+    <div class="nav-item" onclick="showSection('import',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span>Import Data</span>
+    </div>
+    <div class="nav-item" onclick="showSection('pengaturan',this)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Pengaturan</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <small style="font-size:10px;color:var(--text3);display:block;margin-bottom:6px">Marketplace Terhubung</small>
+    <div class="mp-chip"><div class="mp-dot" style="background:#ee4d2d"></div><span>Shopee</span></div>
+    <div class="mp-chip"><div class="mp-dot" style="background:#00aa5b"></div><span>Tokopedia</span></div>
+    <div class="mp-chip"><div class="mp-dot" style="background:#555"></div><span>TikTok Shop</span></div>
+    <div class="mp-chip"><div class="mp-dot" style="background:#1a0dab"></div><span>Lazada</span></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div style="font-size:15px;font-weight:600;color:var(--text)" id="page-title">Dashboard</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="sync-status" style="font-size:11px;color:var(--text3)" title="Status sinkronisasi Supabase">☁️ Menghubungkan...</span>
+      <select class="form-select" id="periodeSelect" onchange="reloadData()" style="font-size:13px">
+        <option value="7">7 hari terakhir</option>
+        <option value="30" selected>30 hari terakhir</option>
+        <option value="90">90 hari terakhir</option>
+      </select>
+      <button class="btn btn-sm" onclick="exportCSV()">📥 Ekspor CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-tambah-jual')">+ Tambah Pesanan</button>
+      <button class="toggle-theme" onclick="toggleTheme()" title="Ganti tema"></button>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- DASHBOARD -->
+    <div class="section active" id="sec-dashboard">
+      <div id="alert-area" style="margin-bottom:16px"></div>
+      <div class="grid-4">
+        <div class="metric-card"><div class="metric-label">Total Penjualan</div><div class="metric-value" id="m-rev">Rp 0</div><div class="metric-sub green" id="m-rev-sub">–</div></div>
+        <div class="metric-card"><div class="metric-label">Total Pesanan</div><div class="metric-value" id="m-ord">0</div><div class="metric-sub green" id="m-ord-sub">–</div></div>
+        <div class="metric-card"><div class="metric-label">Estimasi Laba Bersih</div><div class="metric-value green" id="m-laba">Rp 0</div><div class="metric-sub" id="m-margin" style="color:var(--text3)">– margin</div></div>
+        <div class="metric-card"><div class="metric-label">Stok Kritis</div><div class="metric-value red" id="m-kritis">0</div><div class="metric-sub" style="color:var(--text3)">varian perlu restock</div></div>
+      </div>
+      <div class="grid-2 mb18">
+        <div class="card"><div class="card-title">Penjualan per Marketplace</div><div id="mp-list-dash"></div></div>
+        <div class="card"><div class="card-title">Tren Penjualan Harian</div><div class="chart-box" style="height:210px"><canvas id="chartTrend"></canvas></div></div>
+      </div>
+      <div class="grid-2 mb18">
+        <div class="card"><div class="card-title">Top 5 Produk Terlaris</div><div id="top5-bars"></div></div>
+        <div class="card"><div class="card-title">Status Stok</div><div class="chart-box" style="height:170px"><canvas id="chartStokPie"></canvas></div><div id="pie-legend" style="display:flex;gap:14px;justify-content:center;margin-top:10px;font-size:12px;color:var(--text2);flex-wrap:wrap"></div></div>
+      </div>
+    </div>
+
+    <!-- PENJUALAN -->
+    <div class="section" id="sec-penjualan">
+      <div class="filter-row">
+        <input class="form-input" style="flex:1;min-width:180px" placeholder="Cari no. pesanan atau produk..." id="q-jual" oninput="filterJual()">
+        <select class="form-select" id="f-mp-jual" onchange="filterJual()">
+          <option value="">Semua Marketplace</option>
+        </select>
+        <select class="form-select" id="f-status-jual" onchange="filterJual()">
+          <option value="">Semua Status</option>
+          <option>Selesai</option><option>Diproses</option><option>Dikirim</option><option>Dibatalkan</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-tambah-jual')">+ Tambah</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>No. Pesanan</th><th>Tanggal</th><th>Marketplace</th><th>Produk</th><th>Varian</th><th>Kategori</th><th style="text-align:center">Qty</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="tbl-jual"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pag-jual"></div>
+      </div>
+    </div>
+
+    <!-- STOK -->
+    <div class="section" id="sec-stok">
+      <div class="filter-row">
+        <input class="form-input" style="flex:1;min-width:180px" placeholder="Cari SKU atau produk..." id="q-stok" oninput="filterStok()">
+        <select class="form-select" id="f-status-stok" onchange="filterStok()"><option value="">Semua Status</option><option value="Aman">Aman</option><option value="Rendah">Stok Rendah</option><option value="Habis">Habis</option></select>
+        <select class="form-select" id="f-kat-stok" onchange="filterStok()"><option value="">Semua Kategori</option></select>
+        <button class="btn btn-danger btn-sm" onclick="filterStokKritis()">⚠ Kritis</button>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-tambah-stok')">+ Tambah Produk</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>SKU</th><th>Produk</th><th>Varian</th><th>Kategori</th><th>Stok</th><th>Terjual (30h)</th><th>Est. Habis</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="tbl-stok"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pag-stok"></div>
+      </div>
+    </div>
+
+    <!-- PRODUK & KATEGORI -->
+    <div class="section" id="sec-produk">
+      <div class="grid-4 mb18">
+        <div class="metric-card"><div class="metric-label">Total Produk</div><div class="metric-value" id="p-total-produk">0</div></div>
+        <div class="metric-card"><div class="metric-label">Total Varian</div><div class="metric-value" id="p-total-varian">0</div></div>
+        <div class="metric-card"><div class="metric-label">Total Kategori</div><div class="metric-value" id="p-total-kat">0</div></div>
+        <div class="metric-card"><div class="metric-label">Produk Kritis</div><div class="metric-value red" id="p-kritis">0</div></div>
+      </div>
+      <div class="grid-2 mb18">
+        <div class="card">
+          <div class="card-title">Manajemen Kategori <button class="btn btn-primary btn-sm" onclick="openModal('modal-tambah-kat')">+ Kategori Baru</button></div>
+          <div id="kat-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Manajemen Marketplace <button class="btn btn-primary btn-sm" onclick="bukaModalTambahMp()">+ Marketplace Baru</button></div>
+          <div id="mp-list-manage"></div>
+        </div>
+      </div>
+      <div class="grid-2 mb18">
+        <div class="card">
+          <div class="card-title">Performa per Kategori</div>
+          <div id="kat-perf-bars" style="margin-top:6px"></div>
+        </div>
+        <div class="card"><div class="card-title">Distribusi Listing per Marketplace</div><div class="chart-box" style="height:210px"><canvas id="chartMpDist"></canvas></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-title">Stok per Kategori</div><div class="chart-box" style="height:210px"><canvas id="chartKatStok"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- LABA PER PRODUK -->
+    <div class="section" id="sec-laba">
+      <div class="tab-pills">
+        <div class="tab-pill active" onclick="switchLabaTab('ringkasan',this)">📊 Ringkasan Laba</div>
+        <div class="tab-pill" onclick="switchLabaTab('pertabel',this)">📋 Detail per Produk</div>
+        <div class="tab-pill" onclick="switchLabaTab('biayaadmin',this)">⚙️ Pengaturan Biaya</div>
+      </div>
+
+      <!-- Ringkasan -->
+      <div class="laba-sub active" id="laba-ringkasan">
+        <div class="grid-4 mb18" id="laba-metrics"></div>
+        <div class="grid-2 mb18">
+          <div class="card"><div class="card-title">Laba Bersih per Marketplace</div><div class="chart-box" style="height:210px"><canvas id="chartLabaMP"></canvas></div></div>
+          <div class="card"><div class="card-title">Distribusi Biaya</div><div class="chart-box" style="height:210px"><canvas id="chartBiayaPie"></canvas></div><div id="biaya-pie-legend" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px;font-size:12px;color:var(--text2)"></div></div>
+        </div>
+        <div class="card mb18">
+          <div class="card-title">💳 Biaya Admin per Marketplace — Rincian Lengkap</div>
+          <div class="table-wrap" id="laba-mp-admin-table"></div>
+        </div>
+        <div class="grid-2 mb18">
+          <div class="card">
+            <div class="card-title">🏆 Top Produk Laba Tertinggi</div>
+            <div id="top-laba-tinggi"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">⚠️ Produk Margin Terendah</div>
+            <div id="top-laba-rendah"></div>
+          </div>
+        </div>
+        <div class="card mb18">
+          <div class="card-title">📦 Laba Bersih per Kategori Produk</div>
+          <div id="laba-per-kat" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <!-- Detail per produk -->
+      <div class="laba-sub" id="laba-pertabel">
+        <div class="filter-row">
+          <input class="form-input" style="flex:1;min-width:180px" placeholder="Cari produk..." id="q-laba" oninput="filterLabaTable()">
+          <select class="form-select" id="f-mp-laba" onchange="filterLabaTable()"><option value="">Semua Marketplace</option></select>
+          <select class="form-select" id="f-kat-laba" onchange="filterLabaTable()"><option value="">Semua Kategori</option></select>
+          <select class="form-select" id="f-sort-laba" onchange="filterLabaTable()">
+            <option value="laba_desc">Laba Tertinggi</option>
+            <option value="laba_asc">Laba Terendah</option>
+            <option value="margin_desc">Margin Tertinggi</option>
+            <option value="margin_asc">Margin Terendah</option>
+            <option value="omzet_desc">Omzet Tertinggi</option>
+          </select>
+          <button class="btn btn-sm" onclick="exportLabaCSV()">📥 Ekspor</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Produk</th><th>Kategori</th><th>Marketplace</th><th>Qty</th><th>Omzet</th><th>HPP</th><th>Biaya Admin MP</th><th>Biaya Lain</th><th>Laba Bersih</th><th>Margin</th></tr></thead>
+              <tbody id="tbl-laba"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="pag-laba"></div>
+        </div>
+      </div>
+
+      <!-- Pengaturan biaya -->
+      <div class="laba-sub" id="laba-biayaadmin">
+        <div class="info-box">💡 Atur biaya admin marketplace dan HPP di sini. Semua laporan laba dihitung otomatis berdasarkan pengaturan ini. Biaya admin rata-rata: Shopee 3–5%, Tokopedia 2–3%, TikTok Shop 1–2%, Lazada 3–4%.</div>
+        <div class="grid-2 mb18">
+          <div class="card">
+            <div class="card-title">Biaya Admin per Marketplace (%)</div>
+            <div class="hpp-grid" id="mp-fee-inputs"></div>
+            <div style="margin-top:16px">
+              <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">Biaya Tambahan per Transaksi (Rp)</div>
+              <div class="hpp-grid" id="extra-fee-inputs"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">HPP (Harga Pokok Produksi)</div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.7">Pilih mode perhitungan HPP. Mode % cocok untuk estimasi cepat. Mode per produk lebih akurat jika Anda tahu HPP tiap produk.</div>
+            <div class="form-group">
+              <label>Mode HPP</label>
+              <select class="form-input" id="hpp-mode" onchange="renderHppMode()">
+                <option value="pct">% Global dari omzet (estimasi)</option>
+                <option value="produk">Nominal Rp per produk (akurat)</option>
+              </select>
+            </div>
+            <div id="hpp-mode-content"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="simpanBiaya()">💾 Simpan Pengaturan Biaya</button>
+          <button class="btn btn-sm" onclick="resetBiaya()">↺ Reset Default</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAPORAN KEUANGAN -->
+    <div class="section" id="sec-laporan">
+      <div class="grid-2 mb18">
+        <div class="card"><div class="card-title">Ringkasan Keuangan (30 hari)</div><div id="keuangan-rows"></div></div>
+        <div class="card"><div class="card-title">Revenue per Marketplace</div><div class="chart-box" style="height:210px"><canvas id="chartMpBar"></canvas></div></div>
+      </div>
+      <div class="card mb18"><div class="card-title">Tren Bulanan (6 Bulan Terakhir)</div><div class="chart-box" style="height:250px"><canvas id="chartBulanan"></canvas></div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" onclick="exportCSV()">📥 Ekspor CSV Penjualan</button>
+        <button class="btn" onclick="exportStokCSV()">📦 Ekspor CSV Stok</button>
+        <button class="btn" onclick="exportLabaCSV2()">💰 Ekspor Laporan Laba</button>
+        <button class="btn btn-primary" onclick="window.print()">🖨 Cetak Laporan</button>
+      </div>
+    </div>
+
+    <!-- IMPORT -->
+    <div class="section" id="sec-import">
+      <div class="grid-2 mb18">
+        <div class="card">
+          <div class="card-title">Import Data Penjualan (CSV)</div>
+          <div class="drop-zone" onclick="document.getElementById('file-import').click()" ondragover="event.preventDefault()" ondrop="handleDrop(event,'jual')">
+            <div style="font-size:32px;margin-bottom:8px">📂</div>
+            <p style="font-weight:600;margin-bottom:4px">Seret & lepas file CSV di sini</p>
+            <p style="font-size:12px;color:var(--text3)">atau klik untuk pilih file · CSV dari Shopee / Tokopedia / TikTok Shop</p>
+          </div>
+          <input type="file" id="file-import" accept=".csv" style="display:none" onchange="importFile(event,'jual')">
+          <div id="import-result" style="margin-top:12px"></div>
+          <div style="margin-top:12px"><p style="font-size:12px;color:var(--text2);margin-bottom:6px">Format CSV:</p><code style="font-size:11px;background:var(--surface2);padding:8px 10px;border-radius:7px;display:block;color:var(--text2)">no_pesanan, tanggal, marketplace, produk, varian, kategori, qty, total, status</code></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Import Data Stok</div>
+          <div class="drop-zone" onclick="document.getElementById('file-stok').click()" ondragover="event.preventDefault()" ondrop="handleDrop(event,'stok')">
+            <div style="font-size:32px;margin-bottom:8px">📦</div>
+            <p style="font-weight:600;margin-bottom:4px">Import data stok gudang</p>
+            <p style="font-size:12px;color:var(--text3)">CSV: sku, produk, varian, kategori, stok, terjual_30h</p>
+          </div>
+          <input type="file" id="file-stok" accept=".csv" style="display:none" onchange="importFile(event,'stok')">
+          <div id="import-stok-result" style="margin-top:12px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Panduan Download Laporan dari Marketplace</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:4px">
+          <div style="padding:14px;border-radius:9px;background:var(--surface2)"><div style="font-weight:700;color:#ee4d2d;margin-bottom:6px">🛒 Shopee</div><ol style="font-size:12px;color:var(--text2);padding-left:16px;line-height:2"><li>Seller Centre</li><li>Data → Laporan Penjualan</li><li>Ekspor CSV</li></ol></div>
+          <div style="padding:14px;border-radius:9px;background:var(--surface2)"><div style="font-weight:700;color:#00aa5b;margin-bottom:6px">🟢 Tokopedia</div><ol style="font-size:12px;color:var(--text2);padding-left:16px;line-height:2"><li>Seller Dashboard</li><li>Statistik → Laporan</li><li>Download Excel</li></ol></div>
+          <div style="padding:14px;border-radius:9px;background:var(--surface2)"><div style="font-weight:700;color:#555;margin-bottom:6px">🎵 TikTok Shop</div><ol style="font-size:12px;color:var(--text2);padding-left:16px;line-height:2"><li>Seller Center</li><li>Pesanan → Ekspor</li><li>Pilih CSV</li></ol></div>
+          <div style="padding:14px;border-radius:9px;background:var(--surface2)"><div style="font-weight:700;color:#1a0dab;margin-bottom:6px">🟣 Lazada</div><ol style="font-size:12px;color:var(--text2);padding-left:16px;line-height:2"><li>Seller Center</li><li>Manajemen Pesanan</li><li>Ekspor CSV</li></ol></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PENGATURAN -->
+    <div class="section" id="sec-pengaturan">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Informasi Toko</div>
+          <div class="form-group"><label>Nama Toko / Brand</label><input class="form-input" id="set-nama" placeholder="Nama toko Anda"></div>
+          <div class="form-group"><label>Pemilik</label><input class="form-input" id="set-pemilik" placeholder="Nama pemilik"></div>
+          <div class="form-group"><label>Nomor HP / WA</label><input class="form-input" id="set-hp" placeholder="08xx-xxxx-xxxx"></div>
+          <div class="form-group"><label>Batas Stok Rendah (pcs)</label><input class="form-input" type="number" id="set-batas-stok" value="10"></div>
+          <button class="btn btn-primary" onclick="simpanPengaturan()">Simpan Pengaturan</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Logo Aplikasi</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Unggah logo toko Anda untuk ditampilkan di sidebar, menggantikan logo bawaan OmniSeller.</div>
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+            <div id="logo-preview-box" style="width:56px;height:56px;border:1px dashed var(--border2);border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:var(--surface2)">
+              <img id="logo-preview-img" style="max-width:100%;max-height:100%;display:none">
+              <span id="logo-preview-empty" style="font-size:11px;color:var(--text3)">No Logo</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-sm" onclick="document.getElementById('f-logo').click()">📷 Unggah Logo</button>
+              <button class="btn btn-sm btn-danger" onclick="hapusLogo()">🗑 Hapus Logo</button>
+            </div>
+            <input type="file" id="f-logo" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
+          </div>
+        </div>
+      </div>
+      <div class="grid-2 mb18">
+        <div class="card">
+          <div class="card-title">Data Aplikasi</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Data tersimpan di browser (localStorage) dan tersinkron otomatis ke database Supabase.</div>
+          <div style="background:var(--surface2);border-radius:9px;padding:14px;font-size:13px;margin-bottom:14px">
+            <div class="sumrow"><span class="label">Total pesanan</span><span id="info-total-jual">0</span></div>
+            <div class="sumrow"><span class="label">Total varian stok</span><span id="info-total-stok">0</span></div>
+            <div class="sumrow"><span class="label">Total kategori</span><span id="info-total-kat">0</span></div>
+            <div class="sumrow"><span class="label">Terakhir diperbarui</span><span id="info-last-update">–</span></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm" onclick="backupData()">💾 Backup (JSON)</button>
+            <button class="btn btn-sm" onclick="document.getElementById('f-restore').click()">📂 Restore</button>
+            <button class="btn btn-sm btn-danger" onclick="resetData()">🗑 Reset Data</button>
+          </div>
+          <input type="file" id="f-restore" accept=".json" style="display:none" onchange="restoreData(event)">
+        </div>
+        <div class="card">
+          <div class="card-title">👤 Akun Administrator</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Akun yang sedang login mengelola dashboard ini.</div>
+          <div style="background:var(--surface2);border-radius:9px;padding:14px;font-size:13px;margin-bottom:14px">
+            <div class="sumrow"><span class="label">Email</span><span id="info-admin-email">–</span></div>
+            <div class="sumrow"><span class="label">Login sejak</span><span id="info-admin-since">–</span></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm" onclick="bukaModalGantiPassword()">🔑 Ganti Password</button>
+            <button class="btn btn-sm btn-danger" onclick="adminLogout()">🚪 Keluar (Logout)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- TAMBAH / EDIT PESANAN -->
+<div class="modal-overlay" id="modal-tambah-jual">
+  <div class="modal">
+    <h3 id="modal-jual-title">➕ Tambah Pesanan</h3>
+    <input type="hidden" id="edit-jual-idx" value="">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>No. Pesanan</label><input class="form-input" id="f-no" placeholder="SPH-001"></div>
+      <div class="form-group"><label>Tanggal</label><input class="form-input" type="date" id="f-tgl"></div>
+      <div class="form-group"><label>Marketplace</label><select class="form-input" id="f-mp"></select></div>
+      <div class="form-group"><label>Status</label><select class="form-input" id="f-status"><option>Selesai</option><option>Diproses</option><option>Dikirim</option><option>Dibatalkan</option></select></div>
+    </div>
+    <div class="form-group"><label>Nama Produk</label><input class="form-input" id="f-prod" placeholder="Kaos Polos Hitam" oninput="autocompleteKat()"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="form-group"><label>Varian</label><input class="form-input" id="f-var" placeholder="M / Hitam"></div>
+      <div class="form-group"><label>Qty</label><input class="form-input" type="number" id="f-qty" value="1" min="1"></div>
+      <div class="form-group"><label>Total (Rp)</label><input class="form-input" type="number" id="f-total" placeholder="150000"></div>
+    </div>
+    <div class="form-group"><label>Kategori</label><select class="form-input" id="f-kat-jual"></select></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-tambah-jual')">Batal</button>
+      <button class="btn btn-primary" id="btn-simpan-jual" onclick="simpanPesanan()">Simpan Pesanan</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAMBAH / EDIT STOK -->
+<div class="modal-overlay" id="modal-tambah-stok">
+  <div class="modal">
+    <h3 id="modal-stok-title">📦 Tambah Produk Stok</h3>
+    <input type="hidden" id="edit-stok-idx" value="">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>SKU</label><input class="form-input" id="s-sku" placeholder="SKU-0001"></div>
+      <div class="form-group"><label>Kategori</label><select class="form-input" id="s-kat"></select></div>
+    </div>
+    <div class="form-group"><label>Nama Produk</label><input class="form-input" id="s-prod" placeholder="Kaos Polos"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="form-group"><label>Varian</label><input class="form-input" id="s-var" placeholder="Hitam M"></div>
+      <div class="form-group"><label>Stok (pcs)</label><input class="form-input" type="number" id="s-stok" value="0" min="0"></div>
+      <div class="form-group"><label>Terjual 30h</label><input class="form-input" type="number" id="s-terjual" value="0" min="0"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-tambah-stok')">Batal</button>
+      <button class="btn btn-primary" id="btn-simpan-stok" onclick="simpanStok()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESTOCK -->
+<div class="modal-overlay" id="modal-restock">
+  <div class="modal">
+    <h3 id="restock-title">🔄 Restock</h3>
+    <div class="form-group"><label>SKU</label><input class="form-input" id="rs-sku" readonly></div>
+    <div class="form-group"><label>Produk · Varian</label><input class="form-input" id="rs-produk" readonly></div>
+    <div class="form-group"><label>Stok Saat Ini</label><input class="form-input" id="rs-stok-lama" readonly></div>
+    <div class="form-group"><label>Tambah Stok (pcs)</label><input class="form-input" type="number" id="rs-tambah" value="50" min="1"></div>
+    <div class="form-group"><label>Catatan</label><textarea class="form-input" id="rs-note" placeholder="Restock dari supplier..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-restock')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanRestock()">Simpan Restock</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAMBAH / EDIT KATEGORI -->
+<div class="modal-overlay" id="modal-tambah-kat">
+  <div class="modal" style="max-width:400px">
+    <h3 id="modal-kat-title">🏷️ Tambah Kategori</h3>
+    <input type="hidden" id="edit-kat-idx" value="">
+    <div class="form-group"><label>Nama Kategori</label><input class="form-input" id="kat-nama" placeholder="Atasan, Bawahan, Outer..."></div>
+    <div class="form-group">
+      <label>Warna</label>
+      <div class="color-swatch" id="kat-color-swatch"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-tambah-kat')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanKategori()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- GANTI PASSWORD ADMIN -->
+<div class="modal-overlay" id="modal-ganti-password">
+  <div class="modal" style="max-width:380px">
+    <h3>🔑 Ganti Password</h3>
+    <div class="form-group"><label>Password Baru</label><input class="form-input" type="password" id="pw-baru" placeholder="Minimal 6 karakter"></div>
+    <div class="form-group"><label>Ulangi Password Baru</label><input class="form-input" type="password" id="pw-ulang" placeholder="Ulangi password baru"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-ganti-password')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanPasswordBaru()">Simpan Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAMBAH / EDIT MARKETPLACE -->
+<div class="modal-overlay" id="modal-tambah-mp">
+  <div class="modal" style="max-width:400px">
+    <h3 id="modal-mp-title">🛒 Tambah Marketplace</h3>
+    <input type="hidden" id="edit-mp-idx" value="">
+    <div class="form-group"><label>Nama Marketplace</label><input class="form-input" id="mp-nama" placeholder="Blibli, Bukalapak, JD.ID..."></div>
+    <div class="form-group">
+      <label>Warna</label>
+      <div class="color-swatch" id="mp-color-swatch"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-tambah-mp')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanMarketplace()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- KONFIRMASI HAPUS -->
+<div class="modal-overlay" id="modal-konfirm">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <div style="font-size:36px;margin-bottom:12px">🗑️</div>
+    <h3 style="justify-content:center">Hapus Data?</h3>
+    <p style="color:var(--text2);font-size:13px;margin:12px 0 20px" id="konfirm-msg">Tindakan ini tidak bisa dibatalkan.</p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button class="btn" onclick="closeModal('modal-konfirm')">Batal</button>
+      <button class="btn btn-danger" id="btn-konfirm-ya">Hapus</button>
+    </div>
+  </div>
+</div>
+
+  </div>
+
+<script src="supabase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
