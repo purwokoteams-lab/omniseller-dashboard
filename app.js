@@ -141,7 +141,49 @@ function loginAlert(msg,type){
   const el=document.getElementById('login-alert');
   el.innerHTML=msg?`<div class="alert alert-${type||'danger'}">${msg}</div>`:'';
 }
+function toggleAuthForm(mode){
+  loginAlert('');
+  if(mode==='signup'){
+    document.getElementById('form-login').style.display='none';
+    document.getElementById('form-signup').style.display='';
+    document.getElementById('login-screen-subtitle').textContent='Daftar Administrator Baru';
+  }else{
+    document.getElementById('form-signup').style.display='none';
+    document.getElementById('form-login').style.display='';
+    document.getElementById('login-screen-subtitle').textContent='Login Administrator';
+  }
+}
+async function adminSignUp(){
+  if(typeof supabaseClient==='undefined'||!supabaseClient){loginAlert('Koneksi ke Supabase gagal dimuat. Coba refresh halaman (Ctrl+Shift+R).');return}
+  const nama=document.getElementById('signup-nama').value.trim();
+  const email=document.getElementById('signup-email').value.trim();
+  const password=document.getElementById('signup-password').value;
+  const password2=document.getElementById('signup-password2').value;
+  if(!email||!password){loginAlert('Email dan password wajib diisi');return}
+  if(password.length<6){loginAlert('Password minimal 6 karakter');return}
+  if(password!==password2){loginAlert('Konfirmasi password tidak sama');return}
+  const btn=document.getElementById('btn-signup');btn.disabled=true;btn.textContent='Memproses...';
+  loginAlert('');
+  try{
+    const{data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{nama:nama||email}}});
+    if(error){loginAlert('Daftar gagal: '+error.message);btn.disabled=false;btn.textContent='Daftar Sebagai Administrator';return}
+    if(data.session){
+      // Auto-confirm aktif di project Supabase -> langsung login
+      _currentAdminUser=data.user;
+      showAppScreen();
+      await initApp();
+      updateAdminInfo();
+    }else{
+      // Perlu konfirmasi email dulu
+      loginAlert('Pendaftaran berhasil! Cek email Anda untuk konfirmasi akun, lalu login.','success');
+      toggleAuthForm('login');
+      document.getElementById('login-email').value=email;
+    }
+  }catch(e){loginAlert('Daftar gagal: '+e.message)}
+  btn.disabled=false;btn.textContent='Daftar Sebagai Administrator';
+}
 async function adminLogin(){
+  if(typeof supabaseClient==='undefined'||!supabaseClient){loginAlert('Koneksi ke Supabase gagal dimuat. Coba refresh halaman (Ctrl+Shift+R).');return}
   const email=document.getElementById('login-email').value.trim();
   const password=document.getElementById('login-password').value;
   if(!email||!password){loginAlert('Email dan password wajib diisi');return}
@@ -191,6 +233,10 @@ async function simpanPasswordBaru(){
 // Gerbang utama: cek sesi login saat halaman dibuka
 window.onload=async function(){
   showLoginScreen();
+  if(typeof supabaseClient==='undefined'||!supabaseClient){
+    loginAlert('Gagal memuat koneksi Supabase. Periksa koneksi internet Anda lalu refresh halaman (Ctrl+Shift+R). Jika masih gagal, kemungkinan CDN Supabase diblokir oleh jaringan/firewall Anda.');
+    return;
+  }
   try{
     const{data}=await supabaseClient.auth.getSession();
     if(data&&data.session){
@@ -202,9 +248,11 @@ window.onload=async function(){
   }catch(e){console.warn('Gagal cek sesi login:',e)}
 };
 // Jika sesi berubah (login/logout dari tab lain, token refresh, dst)
-supabaseClient.auth.onAuthStateChange((event,session)=>{
-  if(event==='SIGNED_OUT'){_currentAdminUser=null;showLoginScreen()}
-});
+if(typeof supabaseClient!=='undefined'&&supabaseClient){
+  supabaseClient.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_OUT'){_currentAdminUser=null;showLoginScreen()}
+  });
+}
 
 // ===== SECTIONS =====
 const PAGE_TITLES={dashboard:'Dashboard',penjualan:'Laporan Penjualan',stok:'Stok & Gudang',produk:'Produk & Kategori',laba:'Laba & Biaya Admin per Produk',laporan:'Laporan Keuangan',import:'Import Data',pengaturan:'Pengaturan'};
