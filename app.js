@@ -45,24 +45,93 @@ function saveDB(){
 }
 function loadDB(){const r=localStorage.getItem('omniseller_v2');if(r){DB=JSON.parse(r);return true}return false}
 
-// ===== SUPABASE SYNC =====
+// ===== SUPABASE SYNC (skema relasional - 7 tabel) =====
 let _syncTimeout=null;
 function syncToSupabase(){
   clearTimeout(_syncTimeout);
   _syncTimeout=setTimeout(async()=>{
     try{
-      const{error}=await supabaseClient.from(SUPA_TABLE).upsert({id:SUPA_ROW_ID,data:DB,updated_at:new Date().toISOString()});
-      if(error){console.warn('Supabase sync gagal:',error.message);updateSyncBadge(false,error.message)}
-      else{updateSyncBadge(true)}
+      await Promise.all([
+        syncKategori(), syncMarketplace(), syncStok(), syncPenjualan(),
+        syncBiayaPengaturan(), syncHppProduk(), syncPengaturanToko()
+      ]);
+      updateSyncBadge(true);
     }catch(e){console.warn('Supabase sync error:',e);updateSyncBadge(false,e.message)}
-  },600);
+  },700);
 }
+
+// Strategi: full-replace per tabel (hapus semua baris lalu insert ulang).
+// Sederhana & aman untuk skala UMKM (ratusan-ribuan baris), tidak perlu diff manual.
+async function fullReplace(table,rows){
+  if(!rows.length){ // tetap hapus semua kalau memang kosong
+    const{error}=await supabaseClient.from(table).delete().gte('id',0);
+    if(error)throw error; return;
+  }
+  const{error:delErr}=await supabaseClient.from(table).delete().gte('id',0);
+  if(delErr)throw delErr;
+  const{error:insErr}=await supabaseClient.from(table).insert(rows);
+  if(insErr)throw insErr;
+}
+async function syncKategori(){
+  await fullReplace(TBL_KATEGORI, DB.kategori.map(k=>({nama:k.nama,color:k.color})));
+}
+async function syncMarketplace(){
+  await fullReplace(TBL_MARKETPLACE, DB.marketplace.map(m=>({nama:m.nama,color:m.color,fee_persen:(DB.biaya.mp_fee&&DB.biaya.mp_fee[m.nama])||3})));
+}
+async function syncStok(){
+  await fullReplace(TBL_STOK, DB.stok.map(s=>({sku:s.sku,produk:s.prod,varian:s.varian||'',kategori:s.kat||'Lainnya',stok:s.stok||0,terjual:s.terjual||0,hpp:(DB.biaya.hpp_per_produk&&DB.biaya.hpp_per_produk[s.prod])||0})));
+}
+async function syncPenjualan(){
+  await fullReplace(TBL_PENJUALAN, DB.penjualan.map(r=>({no_pesanan:r.no,tanggal:r.tanggal,tgl_iso:r._date||new Date().toISOString(),marketplace:r.mp,produk:r.prod,varian:r.varian||'',kategori:r.kat||'Lainnya',qty:r.qty||1,total:r.total||0,status:r.status||'Selesai'})));
+}
+async function syncBiayaPengaturan(){
+  const b=DB.biaya||{};const ex=b.extra||{};
+  const{error}=await supabaseClient.from(TBL_BIAYA).upsert({id:1,ongkir:ex.ongkir||0,packaging:ex.packaging||0,lain:ex.lain||0,hpp_mode:b.hpp_mode||'pct',hpp_pct:b.hpp_pct||45,updated_at:new Date().toISOString()});
+  if(error)throw error;
+}
+async function syncHppProduk(){
+  const hpp=DB.biaya&&DB.biaya.hpp_per_produk||{};
+  const rows=Object.keys(hpp).map(p=>({produk:p,hpp:hpp[p]}));
+  const{error:delErr}=await supabaseClient.from(TBL_HPP_PRODUK).delete().neq('produk','__never__');
+  if(delErr)throw delErr;
+  if(rows.length){const{error:insErr}=await supabaseClient.from(TBL_HPP_PRODUK).insert(rows);if(insErr)throw insErr}
+}
+async function syncPengaturanToko(){
+  const p=DB.pengaturan||{};
+  const{error}=await supabaseClient.from(TBL_PENGATURAN).upsert({id:1,nama_toko:p.nama||'Toko Saya',pemilik:p.pemilik||'',hp:p.hp||'',batas_stok:p.batasStok||10,logo:p.logo||'',updated_at:new Date().toISOString()});
+  if(error)throw error;
+}
+
+// Ambil semua data dari 7 tabel relasional & susun ulang jadi struktur DB di memori
 async function loadFromSupabase(){
   try{
-    const{data,error}=await supabaseClient.from(SUPA_TABLE).select('data,updated_at').eq('id',SUPA_ROW_ID).maybeSingle();
-    if(error){console.warn('Gagal memuat dari Supabase:',error.message);updateSyncBadge(false,error.message);return null}
+    const[katRes,mpRes,stokRes,jualRes,biayaRes,hppRes,setRes]=await Promise.all([
+      supabaseClient.from(TBL_KATEGORI).select('*').order('id'),
+      supabaseClient.from(TBL_MARKETPLACE).select('*').order('id'),
+      supabaseClient.from(TBL_STOK).select('*').order('id'),
+      supabaseClient.from(TBL_PENJUALAN).select('*').order('id'),
+      supabaseClient.from(TBL_BIAYA).select('*').eq('id',1).maybeSingle(),
+      supabaseClient.from(TBL_HPP_PRODUK).select('*'),
+      supabaseClient.from(TBL_PENGATURAN).select('*').eq('id',1).maybeSingle(),
+    ]);
+    const errs=[katRes,mpRes,stokRes,jualRes,biayaRes,hppRes,setRes].map(r=>r.error).filter(Boolean);
+    if(errs.length){console.warn('Gagal memuat dari Supabase:',errs[0].message);updateSyncBadge(false,errs[0].message);return null}
+
+    const kategori=(katRes.data||[]).map(k=>({nama:k.nama,color:k.color}));
+    const marketplace=(mpRes.data||[]).map(m=>({nama:m.nama,color:m.color}));
+    const stok=(stokRes.data||[]).map(s=>({sku:s.sku,prod:s.produk,varian:s.varian,kat:s.kategori,stok:s.stok,terjual:s.terjual}));
+    const penjualan=(jualRes.data||[]).map(r=>({no:r.no_pesanan,tanggal:r.tanggal,_date:r.tgl_iso,mp:r.marketplace,prod:r.produk,varian:r.varian,kat:r.kategori,qty:r.qty,total:Number(r.total),status:r.status}));
+
+    const mp_fee={};(mpRes.data||[]).forEach(m=>mp_fee[m.nama]=Number(m.fee_persen));
+    const hpp_per_produk={};(hppRes.data||[]).forEach(h=>hpp_per_produk[h.produk]=Number(h.hpp));
+    const b=biayaRes.data||{};
+    const biaya={mp_fee,extra:{ongkir:Number(b.ongkir||3000),packaging:Number(b.packaging||1500),lain:Number(b.lain||500)},hpp_mode:b.hpp_mode||'pct',hpp_pct:Number(b.hpp_pct||45),hpp_per_produk};
+
+    const s=setRes.data||{};
+    const pengaturan={nama:s.nama_toko||'Toko Saya',pemilik:s.pemilik||'',hp:s.hp||'',batasStok:s.batas_stok||10,logo:s.logo||''};
+
     updateSyncBadge(true);
-    return data?data.data:null;
+    return{kategori,marketplace,stok,penjualan,biaya,pengaturan,lastUpdate:new Date().toISOString()};
   }catch(e){console.warn('Gagal memuat dari Supabase:',e);updateSyncBadge(false,e.message);return null}
 }
 function updateSyncBadge(ok,msg){
@@ -95,22 +164,19 @@ function seedData(){
 
 // ===== INIT (dipanggil setelah login admin berhasil) =====
 async function initApp(){
-  let hasData=loadDB();
+  let hasData=loadDB(); // tampilkan cache lokal dulu (cepat, tetap jalan offline)
 
-  // Coba ambil versi terbaru dari Supabase. Jika data di cloud lebih baru
-  // (atau belum ada data lokal sama sekali), gunakan data dari cloud.
+  // Database relasional Supabase adalah sumber kebenaran utama.
+  // Jika berhasil diambil, selalu pakai itu (menggantikan cache lokal).
   const cloud=await loadFromSupabase();
-  if(cloud&&cloud.penjualan){
-    const cloudTime=cloud.lastUpdate?new Date(cloud.lastUpdate).getTime():0;
-    const localTime=hasData&&DB.lastUpdate?new Date(DB.lastUpdate).getTime():-1;
-    if(cloudTime>=localTime){
-      DB=cloud;
-      localStorage.setItem('omniseller_v2',JSON.stringify(DB));
-      hasData=true;
-    }
+  if(cloud){
+    DB=cloud;
+    localStorage.setItem('omniseller_v2',JSON.stringify(DB));
+    hasData=true;
   }
 
-  if(!hasData||DB.penjualan.length===0)seedData();
+  if(!hasData)seedData();
+  if(hasData&&DB.penjualan.length===0&&DB.stok.length===0)seedData(); // database baru & masih kosong -> isi data contoh
   if(!DB.kategori||DB.kategori.length===0)DB.kategori=[...DEFAULT_KAT];
   if(!DB.marketplace||DB.marketplace.length===0)DB.marketplace=JSON.parse(JSON.stringify(DEFAULT_MP));
   if(!DB.biaya)DB.biaya=JSON.parse(JSON.stringify(DEFAULT_BIAYA));
