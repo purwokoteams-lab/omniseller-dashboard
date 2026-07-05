@@ -1,7 +1,7 @@
 // ===== KONFIGURASI SUPABASE =====
 // Project URL & Anon Key OmniSeller
-const SUPABASE_URL = 'https://lbwmmppaunqikpollvhg.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxid21tcHBhdW5xaWtwb2xsdmhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NTk3NzAsImV4cCI6MjA5ODAzNTc3MH0.O-tEKALTaAwAgVRnC3CKfDxAFuqq8-f43Mlmr7X6F3s';
+const SUPABASE_URL = 'https://tehkuukfgccemsstuxbv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaGt1dWtmZ2NjZW1zc3R1eGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1OTU4MTQsImV4cCI6MjA5ODE3MTgxNH0.6kGjwZS7x5m5oIl8BrtrgEvVV7Kfzsh_rMHIKkJpuIE';
 
 // Inisialisasi client Supabase (tersedia secara global sebagai `supabaseClient`)
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
