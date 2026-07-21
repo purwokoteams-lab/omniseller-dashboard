@@ -9,8 +9,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // 1. KONFIGURASI - Ganti dengan URL & ANON KEY project Supabase Anda
 //    Bisa didapatkan di: Supabase Dashboard > Project Settings > API
 // -------------------------------------------------------------
-const SUPABASE_URL = 'https://YOUR-PROJECT-REF.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR-SUPABASE-ANON-KEY';
+const SUPABASE_URL = 'https://kjfqyirzqoetbbrnnkbi.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqZnF5aXJ6cW9ldGJicm5ua2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjczMzIsImV4cCI6MjA5ODE0MzMzMn0.i6pmZKxwaegdM9wAGn8z8C9Pj98GAgEmq81l5esHcSY';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
