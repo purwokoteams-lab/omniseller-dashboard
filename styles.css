@@ -134,6 +134,7 @@ img { max-width: 100%; display: block; }
 
 .search-form {
   flex: 1;
+  min-width: 0;
   display: flex;
   background: #fff;
   border-radius: 3px;
@@ -141,6 +142,7 @@ img { max-width: 100%; display: block; }
 }
 .search-form input {
   flex: 1;
+  min-width: 0;
   border: none;
   padding: 10px 14px;
   font-size: 14px;
@@ -206,7 +208,7 @@ img { max-width: 100%; display: block; }
 .search-tags {
   max-width: 1200px;
   margin: 8px auto 0;
-  padding: 0 16px 0 220px;
+  padding: 0 16px;
   display: flex;
   gap: 14px;
   font-size: 12px;
@@ -798,10 +800,28 @@ img { max-width: 100%; display: block; }
 }
 
 @media (max-width: 768px) {
-  .header-inner { flex-wrap: wrap; }
+  .header-inner {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+  .logo {
+    order: 1;
+    flex: 1 1 auto;
+  }
+  .header-actions {
+    order: 2;
+    flex: 0 0 auto;
+    gap: 14px;
+  }
+  .search-form {
+    order: 3;
+    flex: 1 1 100%;
+  }
   .logo { font-size: 20px; }
   .search-tags { display: none; }
   .auth-links { font-size: 12px; }
+  .main-header { padding-bottom: 20px; }
+  .banner-section { margin-top: 16px; }
   .banner-section { grid-template-columns: 1fr; }
   .side-banners { flex-direction: row; }
   .carousel { height: 200px; }
@@ -817,6 +837,9 @@ img { max-width: 100%; display: block; }
 @media (max-width: 480px) {
   .container { padding: 0 10px; }
   .header-inner { gap: 10px; }
+  .header-actions { gap: 10px; }
+  .logo { font-size: 17px; }
+  .logo span { display: none; }
   .product-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .category-grid { grid-template-columns: repeat(3, 1fr); }
   .footer-grid { grid-template-columns: 1fr; }
