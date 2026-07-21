@@ -51,6 +51,10 @@ img { max-width: 100%; display: block; }
   padding: 0 16px;
 }
 
+main.container {
+  padding-top: 24px;
+}
+
 .hidden { display: none !important; }
 
 /* =========================================================
@@ -149,13 +153,13 @@ img { max-width: 100%; display: block; }
   outline: none;
 }
 .search-form button {
-  background: var(--primary);
+  background: var(--primary-dark);
   color: #fff;
   padding: 0 20px;
   display: flex;
   align-items: center;
 }
-.search-form button:hover { background: var(--primary-dark); }
+.search-form button:hover { background: var(--secondary-dark); }
 
 .header-actions {
   display: flex;
@@ -275,7 +279,7 @@ img { max-width: 100%; display: block; }
    ========================================================= */
 .banner-section {
   max-width: 1200px;
-  margin: 20px auto;
+  margin: 0 auto 20px;
   padding: 0 16px;
   display: grid;
   grid-template-columns: 2.5fr 1fr;
