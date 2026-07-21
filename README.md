@@ -1,131 +1,92 @@
-# 🛍️ ShopeeClone - E-commerce Modern
+# 🛍️ Lumina Store — Single-Vendor D2C Brand Store
 
-Website e-commerce dengan tampilan & fitur utama terinspirasi dari Shopee, dibangun dengan **HTML5, CSS3, Vanilla JavaScript (ES6 Modular)**, dan **Supabase** sebagai Backend-as-a-Service.
+Toko online modern untuk **satu brand** (bukan marketplace multi-penjual), dibangun dengan **HTML5, CSS3, Vanilla JavaScript (ES6 Modular)**, dan **Supabase** sebagai Backend-as-a-Service.
 
 ## ✨ Fitur Utama
 
-- 🔍 Header dengan search bar, ikon keranjang (badge counter), login/register
-- 🎠 Banner slider promo (carousel otomatis)
-- 🗂️ Grid kategori produk
-- ⚡ Flash Sale dengan countdown timer real-time
-- 🛒 Grid produk (gambar, judul, harga, rating, terjual, tombol tambah ke keranjang)
-- 🔐 Autentikasi via Supabase Auth (login & register)
-- 🧾 Halaman keranjang & checkout dengan kalkulasi subtotal otomatis
-- 💾 Fallback keranjang belanja via **LocalStorage** untuk guest (belum login)
-- 📱 Desain 100% responsif (mobile, tablet, desktop)
+- 🏠 Header sticky minimalis: logo brand, navigasi (Beranda/Produk/Tentang Kami/Kontak), search bar, tombol drawer cart
+- 🎯 Hero section dengan CTA "Belanja Sekarang"
+- 🛡️ Section "Keunggulan Brand" (gratis ongkir, garansi original, quick support, rating)
+- 🗂️ Filter kategori produk (pill tabs) & pencarian
+- 🖼️ Modal Quick View: galeri gambar, deskripsi, pilihan ukuran, qty, tambah ke keranjang / beli langsung via WhatsApp
+- 🛒 Slide-over Cart Drawer (muncul dari samping, tanpa reload halaman)
+- 💬 Checkout via WhatsApp (drawer maupun halaman checkout penuh) sebagai alternatif checkout standar
+- ⭐ Section testimoni pelanggan
+- 📞 Tombol melayang WhatsApp Support
+- 🔐 Login/Register opsional (Supabase Auth) — tetap bisa checkout sebagai tamu
+- 💾 Fallback keranjang via LocalStorage untuk guest, sinkron otomatis ke Supabase setelah login (tanpa `location.reload()`)
+- 📱 Desain 100% responsif, mobile-first
 
 ## 📁 Struktur Project
 
 ```
 ecommerce-shopee-clone/
-├── index.html       # Halaman utama (homepage)
-├── checkout.html    # Halaman cart & checkout
-├── styles.css        # Styling terpadu (Shopee look & feel)
-├── app.js            # Frontend logic, rendering produk, search, cart
-├── supabase.js       # Konfigurasi client Supabase & database helpers
-├── schema.sql         # SQL DDL untuk membuat tabel di Supabase
-└── README.md          # Dokumen ini
+├── index.html       # Homepage: hero, trust signals, produk, testimoni
+├── checkout.html    # Halaman checkout: form pengiriman, metode bayar, ringkasan
+├── styles.css       # Styling: neutral + emerald accent, font Plus Jakarta Sans
+├── app.js           # State management, quick view, cart drawer, search
+├── supabase.js      # Konfigurasi client Supabase & database helpers
+├── schema.sql       # SQL DDL untuk membuat tabel di Supabase
+└── README.md        # Dokumen ini
 ```
 
 ---
 
 ## 🚀 Panduan Setup
 
-### 1. Setup Supabase
+### 1. Ganti Identitas Brand & Kontak
 
-1. Buat akun & project baru di [supabase.com](https://supabase.com).
-2. Setelah project dibuat, buka **SQL Editor** di sidebar dashboard.
-3. Copy seluruh isi file [`schema.sql`](./schema.sql), paste ke SQL Editor, lalu klik **Run**.
-   - Script ini akan membuat tabel `profiles`, `products`, `cart_items`, lengkap dengan Row Level Security (RLS) dan trigger otomatis.
-   - Beberapa data produk contoh juga akan otomatis diisi (bisa dihapus/disesuaikan).
-4. Buka **Project Settings > API**, lalu salin:
-   - `Project URL`
-   - `anon public` key
-5. Buka file `supabase.js`, lalu ganti:
+Buka `app.js`, di bagian paling atas ubah:
+```js
+const BRAND_NAME = 'Lumina Store';       // Nama brand Anda
+const WHATSAPP_NUMBER = '6281234567890'; // Nomor WhatsApp toko (format 62xxx, tanpa +/spasi)
+```
+Lalu sesuaikan juga nomor WhatsApp yang di-hardcode pada tombol melayang di `index.html` dan `checkout.html` (elemen `.wa-float`) dan `SAMPLE_PRODUCTS` sesuai katalog Anda.
+
+### 2. Setup Supabase
+
+1. Buat project di [supabase.com](https://supabase.com).
+2. Jalankan isi [`schema.sql`](./schema.sql) di **SQL Editor** dashboard Supabase (tabel `profiles`, `products`, `cart_items` + RLS).
+3. Salin `Project URL` & `anon public key` dari **Project Settings > API**.
+4. Tempel ke `supabase.js`:
    ```js
    const SUPABASE_URL = 'https://YOUR-PROJECT-REF.supabase.co';
    const SUPABASE_ANON_KEY = 'YOUR-SUPABASE-ANON-KEY';
    ```
-   dengan nilai yang sudah disalin.
-6. Pastikan **Email Auth Provider** aktif di **Authentication > Providers** (biasanya sudah aktif secara default).
-   - Jika ingin skip verifikasi email saat testing, non-aktifkan "Confirm Email" di **Authentication > Settings**.
+5. Isi tabel `products` dengan katalog brand Anda (atau biarkan kosong — aplikasi otomatis memakai `SAMPLE_PRODUCTS` di `app.js` sebagai fallback demo).
 
-### 2. Menjalankan Secara Lokal
+### 3. Menjalankan Secara Lokal
 
-Karena `app.js` menggunakan ES6 Modules (`import`/`export`), file **tidak bisa dibuka langsung** via `file://` — harus melalui local web server. Beberapa opsi:
-
+Karena `app.js` memakai ES6 Modules, wajib dijalankan lewat local server (bukan `file://`):
 ```bash
-# Opsi 1: Menggunakan Python
 python3 -m http.server 5500
-
-# Opsi 2: Menggunakan Node.js (http-server)
+# atau
 npx http-server -p 5500
-
-# Opsi 3: Menggunakan VSCode Live Server extension
 ```
+Buka `http://localhost:5500`.
 
-Lalu buka `http://localhost:5500` di browser.
-
-### 3. Setup GitHub (Version Control)
+### 4. GitHub & Vercel
 
 ```bash
-cd ecommerce-shopee-clone
-git init
-git add .
-git commit -m "Initial commit: ShopeeClone e-commerce website"
-
-# Buat repository baru di GitHub, lalu:
-git remote add origin https://github.com/USERNAME/ecommerce-shopee-clone.git
-git branch -M main
-git push -u origin main
+git init && git add . && git commit -m "Initial commit: Lumina Store"
+git remote add origin https://github.com/USERNAME/lumina-store.git
+git branch -M main && git push -u origin main
 ```
-
-> ⚠️ **Penting:** Jangan commit `SUPABASE_ANON_KEY` project produksi ke repository publik jika project bersifat sensitif. Untuk kebutuhan produksi nyata, pertimbangkan menyimpan konfigurasi di environment variable dan inject saat build (misalnya via Vercel Environment Variables + build step sederhana), karena project vanilla JS statis ini tidak memiliki proses build secara default.
-
-### 4. Deploy ke Vercel
-
-1. Buka [vercel.com](https://vercel.com) dan login (bisa menggunakan akun GitHub).
-2. Klik **Add New Project**, lalu pilih repository `ecommerce-shopee-clone` yang sudah di-push.
-3. Pada konfigurasi build:
-   - **Framework Preset:** `Other` (karena project ini statis/vanilla JS, tanpa build step)
-   - **Build Command:** (kosongkan)
-   - **Output Directory:** `.` (root folder)
-4. Klik **Deploy**.
-5. Setelah selesai, Vercel akan memberikan URL publik seperti `https://ecommerce-shopee-clone.vercel.app`.
-6. Setiap kali Anda `git push` ke branch `main`, Vercel akan otomatis melakukan redeploy (CI/CD otomatis).
-
-### 5. Konfigurasi CORS Supabase (jika diperlukan)
-
-Secara default, Supabase API dapat diakses dari domain manapun (dibatasi oleh RLS, bukan CORS domain-based), sehingga tidak perlu konfigurasi tambahan khusus untuk domain Vercel Anda.
+Di Vercel: **Add New Project** → pilih repo → Framework Preset `Other` → Build Command kosong → Output Directory `.` → Deploy.
 
 ---
 
 ## 🗄️ Skema Database
 
-Lihat detail lengkap di [`schema.sql`](./schema.sql). Ringkasan tabel:
-
-| Tabel | Deskripsi |
-|---|---|
-| `profiles` | Data profil tambahan user, terhubung 1-ke-1 dengan `auth.users` |
-| `products` | Katalog produk (nama, harga, gambar, kategori, rating, stok, flash sale) |
-| `cart_items` | Item keranjang belanja per user (relasi ke `products`) |
-
-Semua tabel sudah dilengkapi **Row Level Security (RLS)** agar user hanya bisa mengakses/mengubah data miliknya sendiri, sementara data produk bisa dibaca publik.
-
----
+Lihat [`schema.sql`](./schema.sql). Ringkasan tabel: `profiles` (data user), `products` (katalog brand), `cart_items` (keranjang per user), semua dengan Row Level Security.
 
 ## 🛠️ Kustomisasi
 
-- **Mengganti data produk:** Edit langsung di tabel `products` melalui Supabase Table Editor, atau melalui SQL `insert` tambahan.
-- **Mengubah warna tema:** Edit variabel CSS di bagian atas `styles.css` (`:root { --primary: ... }`).
-- **Menambah kategori:** Edit array `CATEGORIES` di `app.js`.
-- **Fallback offline:** Jika tabel `products` kosong / koneksi Supabase gagal, aplikasi otomatis menampilkan `SAMPLE_PRODUCTS` (data dummy) yang didefinisikan di `app.js`, sehingga UI tetap bisa didemokan.
-
-## 📌 Catatan Teknis
-
-- Cart untuk **user yang belum login** disimpan di `localStorage` (key: `shopee_clone_guest_cart`), dan otomatis menggunakan Supabase (`cart_items`) begitu user login.
-- Proses checkout pada versi ini bersifat simulasi (mengosongkan cart setelah klik "Checkout Sekarang"). Untuk implementasi order sungguhan, aktifkan bagian tabel `orders` & `order_items` yang sudah disediakan (dalam bentuk komentar) di `schema.sql`.
+- **Kategori produk:** array `CATEGORIES` di `app.js`.
+- **Testimoni:** array `TESTIMONIALS` di `app.js`.
+- **Warna brand:** variabel `--brand`, `--brand-dark`, `--charcoal` di `:root` pada `styles.css`.
+- **Font:** ganti import Google Fonts di baris pertama `styles.css` dan variabel `--font-sans`.
 
 ---
 
-Dibuat untuk tujuan pembelajaran. Bukan produk resmi atau afiliasi dari Shopee.
+Dibuat untuk tujuan pembelajaran / template awal toko online single-brand.
